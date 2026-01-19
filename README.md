@@ -2,26 +2,36 @@
 
 Bot Discord sederhana yang dibuat menggunakan **Python** dan **discord.py** sebagai media pembelajaran pembuatan bot Discord.
 
+---
+
 ## ✨ Fitur
 - `!ping` → cek status bot
 - `!hello` → menyapa user
 - Auto reply kata tertentu
 - Embed message
+- Command moderasi (kick, warn)
 - Menggunakan environment variable untuk keamanan token
 
+---
+
 ## 🛠️ Tech Stack
-- Python 3.12
-- discord.py
-- python-dotenv
+- **Python 3.12**
+- **discord.py**
+- **python-dotenv**
+
+---
 
 ## 📂 Struktur Project
+```
 bot-discord/
 ├── bot.py
 ├── requirements.txt
 ├── .env
 ├── .gitignore
 └── venv/
+```
 
+---
 
 ## 🚀 Cara Menjalankan Bot
 
@@ -29,21 +39,40 @@ bot-discord/
 ```bash
 git clone https://github.com/USERNAME/discord-bot.git
 cd discord-bot
-2️⃣ Aktifkan Virtual Environment
+```
+
+### 2️⃣ Aktifkan Virtual Environment
+```bash
 python -m venv venv
 venv\Scripts\activate
-3️⃣ Install Dependencies
-pip install -r requirements.txt
-4️⃣ Buat File .env
-DISCORD_TOKEN=your_bot_token_here
-5️⃣ Jalankan Bot
-python bot.py
+```
 
-🔒 Keamanan
+### 3️⃣ Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 4️⃣ Buat File .env
+```
+DISCORD_TOKEN=your_bot_token_here
+```
+
+### 5️⃣ Jalankan Bot
+```bash
+python bot.py
+```
+
+---
+
+## 🔒 Keamanan
 Token bot tidak disimpan di repository, menggunakan environment variable.
 
-📌 Catatan
+---
+
+## 📌 Catatan
 Project ini dibuat untuk tujuan pembelajaran dan pengembangan skill backend Python.
 
-Author:
+---
+
+**Author:**  
 Ismet Maulana Azhary
