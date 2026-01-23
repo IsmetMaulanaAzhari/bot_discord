@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 import os
 import socket
+import datetime
+import asyncio
 
 # ================= LOAD ENV =================
 load_dotenv()
@@ -33,8 +35,12 @@ intents.members = True
 
 bot = commands.AutoShardedBot(
     command_prefix="/",
-    intents=intents
+    intents=intents,
+    help_command=None  # Disable default help command
 )
+
+# Track bot start time for uptime
+start_time = datetime.datetime.now()
 
 # ================= EVENTS =================
 @bot.event
@@ -82,6 +88,107 @@ async def info(ctx):
     )
     await ctx.send(embed=embed)
 
+@bot.command()
+async def help(ctx):
+    """Menampilkan daftar command yang tersedia."""
+    embed = discord.Embed(
+        title="📚 Daftar Command",
+        description="Berikut adalah command yang tersedia:",
+        color=discord.Color.green()
+    )
+    embed.add_field(
+        name="🔧 Basic",
+        value="`/ping` - Cek status bot\n`/info` - Info bot\n`/help` - Daftar command\n`/uptime` - Waktu aktif bot",
+        inline=False
+    )
+    embed.add_field(
+        name="🤖 AI",
+        value="`/ai <prompt>` - Chat dengan Gemini AI",
+        inline=False
+    )
+    embed.add_field(
+        name="👤 User",
+        value="`/avatar [@user]` - Lihat avatar\n`/userinfo [@user]` - Info user",
+        inline=False
+    )
+    embed.add_field(
+        name="🏠 Server",
+        value="`/serverinfo` - Info server",
+        inline=False
+    )
+    embed.add_field(
+        name="🛡️ Moderation",
+        value="`/kick @user [alasan]` - Kick member\n`/warn @user [alasan]` - Warn member\n`/clear <jumlah>` - Hapus pesan",
+        inline=False
+    )
+    embed.set_footer(text="Gunakan prefix / untuk semua command")
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def uptime(ctx):
+    """Menampilkan waktu aktif bot."""
+    now = datetime.datetime.now()
+    delta = now - start_time
+    hours, remainder = divmod(int(delta.total_seconds()), 3600)
+    minutes, seconds = divmod(remainder, 60)
+    days, hours = divmod(hours, 24)
+    
+    await ctx.send(
+        f"⏱️ **Uptime**\n"
+        f"🗓️ {days} hari, {hours} jam, {minutes} menit, {seconds} detik"
+    )
+
+@bot.command()
+async def avatar(ctx, member: discord.Member = None):
+    """Menampilkan avatar user."""
+    member = member or ctx.author
+    embed = discord.Embed(
+        title=f"Avatar {member.display_name}",
+        color=discord.Color.purple()
+    )
+    embed.set_image(url=member.display_avatar.url)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def userinfo(ctx, member: discord.Member = None):
+    """Menampilkan informasi user."""
+    member = member or ctx.author
+    roles = [role.mention for role in member.roles[1:]]  # Exclude @everyone
+    
+    embed = discord.Embed(
+        title=f"👤 Info User - {member.display_name}",
+        color=member.color
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.add_field(name="Username", value=str(member), inline=True)
+    embed.add_field(name="ID", value=member.id, inline=True)
+    embed.add_field(name="Status", value=str(member.status).title(), inline=True)
+    embed.add_field(name="Bergabung Server", value=member.joined_at.strftime("%d/%m/%Y"), inline=True)
+    embed.add_field(name="Akun Dibuat", value=member.created_at.strftime("%d/%m/%Y"), inline=True)
+    embed.add_field(name=f"Roles [{len(roles)}]", value=" ".join(roles) if roles else "Tidak ada", inline=False)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def serverinfo(ctx):
+    """Menampilkan informasi server."""
+    guild = ctx.guild
+    
+    embed = discord.Embed(
+        title=f"🏠 Info Server - {guild.name}",
+        color=discord.Color.gold()
+    )
+    if guild.icon:
+        embed.set_thumbnail(url=guild.icon.url)
+    embed.add_field(name="Owner", value=guild.owner.mention, inline=True)
+    embed.add_field(name="ID", value=guild.id, inline=True)
+    embed.add_field(name="Dibuat", value=guild.created_at.strftime("%d/%m/%Y"), inline=True)
+    embed.add_field(name="Members", value=guild.member_count, inline=True)
+    embed.add_field(name="Channels", value=len(guild.channels), inline=True)
+    embed.add_field(name="Roles", value=len(guild.roles), inline=True)
+    embed.add_field(name="Boost Level", value=guild.premium_tier, inline=True)
+    embed.add_field(name="Boosts", value=guild.premium_subscription_count, inline=True)
+    await ctx.send(embed=embed)
+
 # ================= GEMINI CHAT COMMAND =================
 @bot.command()
 async def ai(ctx, *, prompt: str):
@@ -106,6 +213,52 @@ async def ai_slash(interaction: discord.Interaction, prompt: str):
     except Exception:
         await interaction.followup.send("❌ Terjadi error pada AI.")
 
+@bot.tree.command(name="avatar", description="Lihat avatar user")
+async def avatar_slash(interaction: discord.Interaction, member: discord.Member = None):
+    member = member or interaction.user
+    embed = discord.Embed(
+        title=f"Avatar {member.display_name}",
+        color=discord.Color.purple()
+    )
+    embed.set_image(url=member.display_avatar.url)
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="userinfo", description="Lihat info user")
+async def userinfo_slash(interaction: discord.Interaction, member: discord.Member = None):
+    member = member or interaction.user
+    roles = [role.mention for role in member.roles[1:]]
+    
+    embed = discord.Embed(
+        title=f"👤 Info User - {member.display_name}",
+        color=member.color
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.add_field(name="Username", value=str(member), inline=True)
+    embed.add_field(name="ID", value=member.id, inline=True)
+    embed.add_field(name="Status", value=str(member.status).title(), inline=True)
+    embed.add_field(name="Bergabung Server", value=member.joined_at.strftime("%d/%m/%Y"), inline=True)
+    embed.add_field(name="Akun Dibuat", value=member.created_at.strftime("%d/%m/%Y"), inline=True)
+    embed.add_field(name=f"Roles [{len(roles)}]", value=" ".join(roles) if roles else "Tidak ada", inline=False)
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="serverinfo", description="Lihat info server")
+async def serverinfo_slash(interaction: discord.Interaction):
+    guild = interaction.guild
+    
+    embed = discord.Embed(
+        title=f"🏠 Info Server - {guild.name}",
+        color=discord.Color.gold()
+    )
+    if guild.icon:
+        embed.set_thumbnail(url=guild.icon.url)
+    embed.add_field(name="Owner", value=guild.owner.mention, inline=True)
+    embed.add_field(name="ID", value=guild.id, inline=True)
+    embed.add_field(name="Dibuat", value=guild.created_at.strftime("%d/%m/%Y"), inline=True)
+    embed.add_field(name="Members", value=guild.member_count, inline=True)
+    embed.add_field(name="Channels", value=len(guild.channels), inline=True)
+    embed.add_field(name="Roles", value=len(guild.roles), inline=True)
+    await interaction.response.send_message(embed=embed)
+
 # ================= MODERATION =================
 @bot.command()
 @commands.has_permissions(kick_members=True)
@@ -118,12 +271,52 @@ async def kick(ctx, member: discord.Member, *, reason="Tidak ada alasan"):
 async def warn(ctx, member: discord.Member, *, reason="Tidak ada alasan"):
     await ctx.send(f"⚠️ {member.mention} diperingatkan.\nAlasan: {reason}")
 
+@bot.command()
+@commands.has_permissions(manage_messages=True)
+async def clear(ctx, amount: int):
+    """Hapus sejumlah pesan dari channel."""
+    if amount < 1 or amount > 100:
+        await ctx.send("❌ Jumlah harus antara 1-100.")
+        return
+    
+    deleted = await ctx.channel.purge(limit=amount + 1)  # +1 untuk hapus command juga
+    msg = await ctx.send(f"✅ Berhasil menghapus {len(deleted) - 1} pesan.")
+    await asyncio.sleep(3)
+    await msg.delete()
+
+@bot.command()
+async def poll(ctx, question: str, *options):
+    """Buat polling sederhana. Contoh: /poll "Pertanyaan?" "Opsi 1" "Opsi 2" """
+    if len(options) < 2:
+        await ctx.send("❌ Minimal 2 opsi diperlukan.")
+        return
+    if len(options) > 10:
+        await ctx.send("❌ Maksimal 10 opsi.")
+        return
+    
+    reactions = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
+    
+    description = "\n".join([f"{reactions[i]} {option}" for i, option in enumerate(options)])
+    embed = discord.Embed(
+        title=f"📊 {question}",
+        description=description,
+        color=discord.Color.blue()
+    )
+    embed.set_footer(text=f"Poll oleh {ctx.author.display_name}")
+    
+    poll_msg = await ctx.send(embed=embed)
+    for i in range(len(options)):
+        await poll_msg.add_reaction(reactions[i])
+
 # ================= ERROR HANDLER =================
 @kick.error
 @warn.error
+@clear.error
 async def permission_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
         await ctx.send("❌ Kamu tidak punya izin untuk command ini.")
+    elif isinstance(error, commands.BadArgument):
+        await ctx.send("❌ Argumen tidak valid. Cek format command.")
 
 # ================= RUN =================
 bot.run(DISCORD_TOKEN)
