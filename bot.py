@@ -26,8 +26,13 @@ model = genai.GenerativeModel(
     - Jika tidak tahu, katakan tidak tahu
     """
 )
+# ================= AI MEMORY (PER USER) =================
+user_chats = {}
 
-chat = model.start_chat()
+def get_user_chat(user_id: int):
+    if user_id not in user_chats:
+        user_chats[user_id] = model.start_chat()
+    return user_chats[user_id]
 # ================= DISCORD BOT =================
 intents = discord.Intents.default()
 intents.message_content = True
@@ -198,7 +203,9 @@ async def ai(ctx, *, prompt: str):
     """
     try:
         await ctx.typing()
+        chat = get_user_chat(ctx.author.id)  # ✅ AMBIL CHAT USER
         response = chat.send_message(prompt)
+
         await ctx.send(response.text[:2000])
     except Exception as e:
         await ctx.send("❌ Terjadi error saat memproses AI.")
