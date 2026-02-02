@@ -1,52 +1,58 @@
-# 🤖 Discord Bot with Gemini AI
+# 🤖 Discord AI Chatbot
 
-Bot Discord multifungsi yang dibuat menggunakan **Python**, **discord.py**, dan **Google Gemini AI** sebagai media pembelajaran pembuatan bot Discord.
+Bot Discord multifungsi dengan **Groq AI** (LLaMA, Mixtral, Gemma) untuk chat, translate, code explain, dan berbagai fitur menarik lainnya!
 
 ---
 
-## ✨ Fitur
+## ✨ Fitur Utama
 
-### 🔧 Basic Commands
+### 💬 AI Chat
+- Chat langsung dengan AI tanpa command
+- Conversation memory per user
+- Multiple AI models & personas
+- Adjustable creativity (temperature)
+
+### 🛠️ Tools Commands
 | Command | Deskripsi |
 |---------|-----------|
-| `/ping` | Cek status dan latency bot |
-| `/info` | Informasi tentang bot |
-| `/help` | Menampilkan daftar command |
-| `/uptime` | Waktu aktif bot |
+| `!translate <lang> <teks>` | Terjemahkan ke bahasa lain |
+| `!summarize <teks>` | Ringkas teks panjang |
+| `!explain <kode>` | Jelaskan kode programming |
+| `!imagine <deskripsi>` | Generate AI image prompt |
 
-### 🤖 AI Commands
+### 🎮 Fun Commands
 | Command | Deskripsi |
 |---------|-----------|
-| `/ai <prompt>` | Chat dengan Gemini AI |
+| `!quiz [topik]` | Quiz random dengan berbagai topik |
+| `!roast [@user]` | Roast seseorang dengan humor |
+| `!motivate` | Dapatkan motivasi harian |
+| `!joke` | Random jokes lucu |
 
-### 👤 User Commands
+### ⚙️ Settings Commands
 | Command | Deskripsi |
 |---------|-----------|
-| `/avatar [@user]` | Menampilkan avatar user |
-| `/userinfo [@user]` | Menampilkan informasi user |
+| `!help` | Tampilkan semua command |
+| `!model [nama]` | Lihat/ganti model AI |
+| `!persona [nama]` | Lihat/ganti persona AI |
+| `!temp [0.0-1.0]` | Atur kreativitas AI |
+| `!clear` | Hapus riwayat chat |
+| `!history` | Lihat jumlah riwayat |
+| `!status` | Status bot dan info |
 
-### 🏠 Server Commands
-| Command | Deskripsi |
-|---------|-----------|
-| `/serverinfo` | Menampilkan informasi server |
+### 🤖 Available Models
+- `llama` - LLaMA 3.3 70B Versatile
+- `mixtral` - Mixtral 8x7B 32K
+- `gemma` - Gemma 2 9B IT
+- `llama-small` - LLaMA 3.1 8B Instant
 
-### 🛡️ Moderation Commands
-| Command | Deskripsi |
-|---------|-----------|
-| `/kick @user [alasan]` | Kick member dari server |
-| `/warn @user [alasan]` | Berikan peringatan kepada member |
-| `/clear <jumlah>` | Hapus sejumlah pesan (1-100) |
+### 🎭 Available Personas
+- `default` - Asisten umum
+- `programmer` - Expert coding
+- `creative` - Penulis kreatif
+- `teacher` - Guru sabar
 
-### 📊 Utility Commands
-| Command | Deskripsi |
-|---------|-----------|
-| `/poll "pertanyaan" "opsi1" "opsi2"` | Buat polling sederhana |
-
-### ⚡ Fitur Lainnya
-- Auto reply untuk kata tertentu
-- Slash commands support
-- AutoSharded bot untuk scalability
-- Embed messages
+### 🌐 Supported Languages
+`id` Indonesian | `en` English | `jp` Japanese | `kr` Korean | `zh` Chinese | `ar` Arabic | `es` Spanish | `fr` French | `de` German
 
 ---
 
@@ -54,13 +60,14 @@ Bot Discord multifungsi yang dibuat menggunakan **Python**, **discord.py**, dan 
 - **Python 3.12**
 - **discord.py**
 - **python-dotenv**
-- **google-generativeai**
+- **groq**
 
 ---
 
 ## 📂 Struktur Project
 ```
 bot-discord/
+├── groq_chatbot.py
 ├── bot.py
 ├── requirements.txt
 ├── .env
@@ -92,12 +99,12 @@ pip install -r requirements.txt
 ### 4️⃣ Buat File .env
 ```env
 DISCORD_TOKEN=your_discord_bot_token
-GEMINI_API_KEY=your_gemini_api_key
+GROQ_API_KEY=your_groq_api_key
 ```
 
 ### 5️⃣ Jalankan Bot
 ```bash
-python bot.py
+python groq_chatbot.py
 ```
 
 ---
@@ -110,8 +117,8 @@ python bot.py
 3. Pergi ke menu "Bot"
 4. Copy token bot
 
-### Gemini API Key
-1. Buka [Google AI Studio](https://aistudio.google.com/app/apikey)
+### Groq API Key
+1. Buka [Groq Console](https://console.groq.com/keys)
 2. Buat API key baru
 3. Copy API key
 
@@ -121,6 +128,22 @@ python bot.py
 - Token dan API key tidak disimpan di repository
 - Menggunakan environment variable untuk keamanan
 - File `.env` sudah di-ignore oleh git
+
+---
+
+## 📸 Screenshots
+
+### Chat dengan AI
+```
+User: Jelaskan tentang Python
+Bot: [Embed response dengan penjelasan lengkap]
+```
+
+### Quiz
+```
+!quiz programming
+Bot: [Quiz tentang programming dengan 4 opsi jawaban]
+```
 
 ---
 

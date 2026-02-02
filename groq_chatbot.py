@@ -5,6 +5,7 @@ from groq import Groq
 from dotenv import load_dotenv
 from datetime import datetime
 import asyncio
+import random
 
 # ================= LOAD ENV =================
 load_dotenv()
@@ -26,6 +27,20 @@ MODELS = {
 current_model = "llama"
 conversation_history = {}  # Per-user conversation history
 MAX_HISTORY = 20  # Max messages to remember per user
+current_temperature = 0.7  # AI creativity level (0.0 - 1.0)
+
+# Language codes for translation
+LANGUAGES = {
+    "id": "Bahasa Indonesia",
+    "en": "English",
+    "jp": "Japanese",
+    "kr": "Korean",
+    "zh": "Chinese",
+    "ar": "Arabic",
+    "es": "Spanish",
+    "fr": "French",
+    "de": "German"
+}
 
 # System prompts
 SYSTEM_PROMPTS = {
@@ -62,21 +77,37 @@ def clear_history(user_id):
     if user_id in conversation_history:
         conversation_history[user_id] = []
 
-async def get_ai_response(user_id, prompt):
+async def get_ai_response(user_id, prompt, system_override=None):
     """Get AI response from Groq with conversation history."""
     history = get_user_history(user_id)
     
-    messages = [{"role": "system", "content": SYSTEM_PROMPTS[current_persona]}]
-    messages.extend(history)
+    system_prompt = system_override if system_override else SYSTEM_PROMPTS[current_persona]
+    messages = [{"role": "system", "content": system_prompt}]
+    
+    if not system_override:  # Only include history for normal chat
+        messages.extend(history)
     messages.append({"role": "user", "content": prompt})
     
     response = groq_client.chat.completions.with_raw_response.create(
         messages=messages,
         model=MODELS[current_model],
-        temperature=0.7,
+        temperature=current_temperature,
         max_tokens=2048
     )
     
+    return response
+
+async def quick_ai_request(prompt, system_prompt):
+    """Quick AI request without history."""
+    response = groq_client.chat.completions.with_raw_response.create(
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ],
+        model=MODELS[current_model],
+        temperature=current_temperature,
+        max_tokens=2048
+    )
     return response
 
 # ================= EVENTS =================
@@ -162,27 +193,44 @@ async def help(ctx):
         inline=False
     )
     embed.add_field(
-        name="🔧 Commands",
+        name="🔧 Settings",
         value=(
-            "`!help` - Tampilkan bantuan ini\n"
+            "`!help` - Tampilkan bantuan\n"
             "`!model [nama]` - Lihat/ganti model AI\n"
             "`!persona [nama]` - Lihat/ganti persona AI\n"
-            "`!clear` - Hapus riwayat percakapan\n"
-            "`!history` - Lihat jumlah riwayat chat\n"
-            "`!status` - Status bot dan kuota"
+            "`!temp [0.0-1.0]` - Atur kreativitas AI\n"
+            "`!clear` - Hapus riwayat\n"
+            "`!history` - Lihat riwayat\n"
+            "`!status` - Status bot"
         ),
         inline=False
     )
     embed.add_field(
-        name="🤖 Models",
-        value="\n".join([f"`{k}` - {v}" for k, v in MODELS.items()]),
+        name="🛠️ Tools",
+        value=(
+            "`!translate <lang> <teks>` - Terjemahkan teks\n"
+            "`!summarize <teks>` - Ringkas teks\n"
+            "`!explain <kode>` - Jelaskan kode\n"
+            "`!imagine <deskripsi>` - Generate image prompt"
+        ),
         inline=False
     )
     embed.add_field(
-        name="🎭 Personas",
-        value="\n".join([f"`{k}` - {v[:50]}..." for k, v in SYSTEM_PROMPTS.items()]),
+        name="🎮 Fun",
+        value=(
+            "`!quiz [topik]` - Quiz random\n"
+            "`!roast [@user]` - Roast seseorang\n"
+            "`!motivate` - Motivasi harian\n"
+            "`!joke` - Random jokes"
+        ),
         inline=False
     )
+    embed.add_field(
+        name="🌐 Languages",
+        value="`id` `en` `jp` `kr` `zh` `ar` `es` `fr` `de`",
+        inline=False
+    )
+    embed.set_footer(text="Prefix: ! | Chat langsung tanpa prefix untuk AI")
     await ctx.send(embed=embed)
 
 @bot.command()
@@ -256,10 +304,254 @@ async def status(ctx):
     )
     embed.add_field(name="🤖 Model", value=MODELS[current_model], inline=True)
     embed.add_field(name="🎭 Persona", value=current_persona, inline=True)
+    embed.add_field(name="🌡️ Temperature", value=f"{current_temperature}", inline=True)
     embed.add_field(name="👥 Active Users", value=len(conversation_history), inline=True)
     embed.add_field(name="💬 Your History", value=f"{len(get_user_history(str(ctx.author.id)))} messages", inline=True)
     embed.add_field(name="⏰ Uptime", value="Running", inline=True)
     await ctx.send(embed=embed)
+
+@bot.command()
+async def temp(ctx, value: float = None):
+    """Atur temperature/kreativitas AI (0.0 - 1.0)."""
+    global current_temperature
+    
+    if value is None:
+        await ctx.send(f"🌡️ Temperature saat ini: **{current_temperature}**\n💡 Gunakan `!temp <0.0-1.0>` untuk mengubah")
+        return
+    
+    if 0.0 <= value <= 1.0:
+        current_temperature = value
+        creativity = "🧊 Sangat Fokus" if value < 0.3 else "⚖️ Seimbang" if value < 0.7 else "🔥 Sangat Kreatif"
+        await ctx.send(f"✅ Temperature diubah ke **{value}** ({creativity})")
+    else:
+        await ctx.send("❌ Temperature harus antara 0.0 - 1.0")
+
+# ================= UTILITY COMMANDS =================
+@bot.command()
+async def translate(ctx, lang: str, *, text: str):
+    """Terjemahkan teks ke bahasa lain."""
+    if lang.lower() not in LANGUAGES:
+        langs = ", ".join([f"`{k}`" for k in LANGUAGES.keys()])
+        await ctx.send(f"❌ Bahasa tidak valid. Pilih: {langs}")
+        return
+    
+    async with ctx.typing():
+        try:
+            target_lang = LANGUAGES[lang.lower()]
+            system = f"Kamu adalah penerjemah profesional. Terjemahkan teks berikut ke {target_lang}. Hanya berikan hasil terjemahan, tanpa penjelasan."
+            
+            response = await asyncio.to_thread(
+                quick_ai_request, text, system
+            )
+            
+            completion = response.parse()
+            result = completion.choices[0].message.content
+            
+            embed = discord.Embed(
+                title=f"🌐 Terjemahan ke {target_lang}",
+                color=discord.Color.teal()
+            )
+            embed.add_field(name="📝 Original", value=text[:1000], inline=False)
+            embed.add_field(name="🔄 Terjemahan", value=result[:1000], inline=False)
+            await ctx.send(embed=embed)
+            
+        except Exception as e:
+            await ctx.send(f"❌ Error: {str(e)[:200]}")
+
+@bot.command()
+async def summarize(ctx, *, text: str):
+    """Ringkas teks panjang."""
+    async with ctx.typing():
+        try:
+            system = "Kamu adalah asisten yang ahli meringkas. Buat ringkasan singkat dan padat dari teks berikut dalam Bahasa Indonesia. Fokus pada poin-poin penting."
+            
+            response = await asyncio.to_thread(
+                quick_ai_request, text, system
+            )
+            
+            completion = response.parse()
+            result = completion.choices[0].message.content
+            
+            embed = discord.Embed(
+                title="📋 Ringkasan",
+                description=result[:4000],
+                color=discord.Color.blue()
+            )
+            embed.set_footer(text=f"Original: {len(text)} chars → Summary: {len(result)} chars")
+            await ctx.send(embed=embed)
+            
+        except Exception as e:
+            await ctx.send(f"❌ Error: {str(e)[:200]}")
+
+@bot.command()
+async def explain(ctx, *, code: str):
+    """Jelaskan kode programming."""
+    async with ctx.typing():
+        try:
+            system = "Kamu adalah programmer expert. Jelaskan kode berikut dengan bahasa Indonesia yang mudah dipahami. Jelaskan: 1) Apa yang dilakukan kode ini, 2) Bagaimana cara kerjanya, 3) Konsep penting yang digunakan."
+            
+            response = await asyncio.to_thread(
+                quick_ai_request, code, system
+            )
+            
+            completion = response.parse()
+            result = completion.choices[0].message.content
+            
+            embed = discord.Embed(
+                title="💻 Penjelasan Kode",
+                description=result[:4000],
+                color=discord.Color.dark_green()
+            )
+            await ctx.send(embed=embed)
+            
+        except Exception as e:
+            await ctx.send(f"❌ Error: {str(e)[:200]}")
+
+@bot.command()
+async def imagine(ctx, *, description: str):
+    """Generate prompt untuk AI image generator."""
+    async with ctx.typing():
+        try:
+            system = """Kamu adalah expert prompt engineer untuk AI image generator seperti Midjourney, DALL-E, dan Stable Diffusion.
+Buatkan prompt yang detail dan efektif berdasarkan deskripsi user.
+Format output:
+1. Prompt utama dalam bahasa Inggris
+2. Negative prompt
+3. Style recommendations
+4. Parameter suggestions (aspect ratio, etc)"""
+            
+            response = await asyncio.to_thread(
+                quick_ai_request, description, system
+            )
+            
+            completion = response.parse()
+            result = completion.choices[0].message.content
+            
+            embed = discord.Embed(
+                title="🎨 AI Image Prompt",
+                description=result[:4000],
+                color=discord.Color.magenta()
+            )
+            embed.set_footer(text="Copy prompt ini ke Midjourney/DALL-E/Stable Diffusion")
+            await ctx.send(embed=embed)
+            
+        except Exception as e:
+            await ctx.send(f"❌ Error: {str(e)[:200]}")
+
+@bot.command()
+async def quiz(ctx, topic: str = "random"):
+    """Generate quiz pertanyaan."""
+    async with ctx.typing():
+        try:
+            topics = ["programming", "science", "history", "geography", "technology", "math"]
+            if topic == "random":
+                topic = random.choice(topics)
+            
+            system = f"""Buat 1 soal quiz tentang {topic} dalam Bahasa Indonesia.
+Format:
+📝 **Pertanyaan:** [pertanyaan]
+
+A) [opsi A]
+B) [opsi B]
+C) [opsi C]
+D) [opsi D]
+
+||✅ Jawaban: [huruf jawaban] - [penjelasan singkat]||
+
+Note: Jawaban harus di-spoiler dengan ||"""
+            
+            response = await asyncio.to_thread(
+                quick_ai_request, f"Buat quiz tentang {topic}", system
+            )
+            
+            completion = response.parse()
+            result = completion.choices[0].message.content
+            
+            embed = discord.Embed(
+                title=f"🧠 Quiz: {topic.title()}",
+                description=result[:4000],
+                color=discord.Color.gold()
+            )
+            embed.set_footer(text="Klik spoiler untuk melihat jawaban!")
+            await ctx.send(embed=embed)
+            
+        except Exception as e:
+            await ctx.send(f"❌ Error: {str(e)[:200]}")
+
+@bot.command()
+async def roast(ctx, member: discord.Member = None):
+    """Roast seseorang dengan humor."""
+    member = member or ctx.author
+    
+    async with ctx.typing():
+        try:
+            system = "Kamu adalah komedian yang ahli roasting. Buat roast yang lucu dan friendly (tidak kasar/menyinggung SARA) untuk seseorang. Gunakan bahasa Indonesia gaul. Maksimal 3 kalimat."
+            
+            response = await asyncio.to_thread(
+                quick_ai_request, f"Roast seseorang bernama {member.display_name}", system
+            )
+            
+            completion = response.parse()
+            result = completion.choices[0].message.content
+            
+            embed = discord.Embed(
+                title=f"🔥 Roast untuk {member.display_name}",
+                description=result[:2000],
+                color=discord.Color.red()
+            )
+            embed.set_thumbnail(url=member.display_avatar.url)
+            await ctx.send(embed=embed)
+            
+        except Exception as e:
+            await ctx.send(f"❌ Error: {str(e)[:200]}")
+
+@bot.command()
+async def motivate(ctx):
+    """Dapatkan motivasi dari AI."""
+    async with ctx.typing():
+        try:
+            system = "Kamu adalah motivator inspiratif. Berikan 1 quote motivasi original (bukan quote terkenal) dalam Bahasa Indonesia yang powerful dan menyentuh. Tambahkan emoji yang relevan."
+            
+            response = await asyncio.to_thread(
+                quick_ai_request, "Berikan motivasi", system
+            )
+            
+            completion = response.parse()
+            result = completion.choices[0].message.content
+            
+            embed = discord.Embed(
+                title="✨ Motivasi Hari Ini",
+                description=result[:2000],
+                color=discord.Color.gold()
+            )
+            await ctx.send(embed=embed)
+            
+        except Exception as e:
+            await ctx.send(f"❌ Error: {str(e)[:200]}")
+
+@bot.command()
+async def joke(ctx):
+    """Dapatkan jokes dari AI."""
+    async with ctx.typing():
+        try:
+            system = "Kamu adalah komedian Indonesia. Ceritakan 1 jokes/lelucon yang lucu dalam Bahasa Indonesia. Bisa berupa pun, wordplay, atau jokes situasional. Pastikan family-friendly."
+            
+            response = await asyncio.to_thread(
+                quick_ai_request, "Ceritakan jokes lucu", system
+            )
+            
+            completion = response.parse()
+            result = completion.choices[0].message.content
+            
+            embed = discord.Embed(
+                title="😂 Jokes",
+                description=result[:2000],
+                color=discord.Color.orange()
+            )
+            await ctx.send(embed=embed)
+            
+        except Exception as e:
+            await ctx.send(f"❌ Error: {str(e)[:200]}")
 
 # ================= RUN =================
 bot.run(DISCORD_TOKEN)
