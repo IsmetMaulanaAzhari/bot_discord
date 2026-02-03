@@ -1,10 +1,26 @@
 # 🤖 Discord AI Chatbot
 
-Bot Discord multifungsi dengan **Groq AI** (LLaMA, Mixtral, Gemma) untuk chat, translate, code explain, dan berbagai fitur menarik lainnya!
+Bot Discord multifungsi dengan **Groq AI** & **Gemini AI** untuk chat, translate, code explain, dan berbagai fitur menarik lainnya! Dilengkapi dengan **Interactive Menu** menggunakan Buttons dan Dropdown!
 
 ---
 
 ## ✨ Fitur Utama
+
+### 🎮 Interactive Menus (NEW!)
+Bot ini dilengkapi dengan menu interaktif menggunakan Discord UI Components:
+
+| Command | Deskripsi |
+|---------|-----------|
+| `/menu` | Menu utama dengan tombol interaktif |
+| `/helpmenu` | Menu bantuan dengan dropdown kategori |
+| `/roles` | Role selector dengan dropdown |
+| `/reset_ai` | Reset AI memory dengan konfirmasi |
+
+**Fitur Menu:**
+- 🔘 **Buttons** - Klik untuk aksi cepat
+- 📋 **Dropdown/Select Menu** - Pilih dari daftar opsi
+- ✅ **Confirm Dialog** - Konfirmasi sebelum aksi penting
+- ⏱️ **Auto Timeout** - Menu expire otomatis
 
 ### 💬 AI Chat
 - Chat langsung dengan AI tanpa command
@@ -100,11 +116,16 @@ pip install -r requirements.txt
 ```env
 DISCORD_TOKEN=your_discord_bot_token
 GROQ_API_KEY=your_groq_api_key
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
 ### 5️⃣ Jalankan Bot
 ```bash
+# Untuk Groq AI Bot
 python groq_chatbot.py
+
+# Untuk Gemini AI Bot (dengan Interactive Menu)
+python bot.py
 ```
 
 ---
@@ -122,6 +143,11 @@ python groq_chatbot.py
 2. Buat API key baru
 3. Copy API key
 
+### Gemini API Key
+1. Buka [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Buat API key baru
+3. Copy API key
+
 ---
 
 ## 🔒 Keamanan
@@ -133,16 +159,37 @@ python groq_chatbot.py
 
 ## 📸 Screenshots
 
+### Interactive Menu
+```
+/menu
+┌─────────────────────────────┐
+│     🎮 Main Menu            │
+├─────────────────────────────┤
+│ [📊 Status] [🤖 AI] [👤 Profile] │
+│ [🏠 Server] [📚 Help] [❌ Close]  │
+└─────────────────────────────┘
+```
+
+### Help Menu dengan Dropdown
+```
+/helpmenu
+┌─────────────────────────────┐
+│     📚 Help Menu            │
+├─────────────────────────────┤
+│ [📋 Pilih kategori...    ▼] │
+│  ├ 🔧 Basic                 │
+│  ├ 🤖 AI                    │
+│  ├ 👤 User                  │
+│  ├ 🏠 Server                │
+│  ├ 🛡️ Moderation           │
+│  └ 📊 Utility               │
+└─────────────────────────────┘
+```
+
 ### Chat dengan AI
 ```
 User: Jelaskan tentang Python
 Bot: [Embed response dengan penjelasan lengkap]
-```
-
-### Quiz
-```
-!quiz programming
-Bot: [Quiz tentang programming dengan 4 opsi jawaban]
 ```
 
 ---
