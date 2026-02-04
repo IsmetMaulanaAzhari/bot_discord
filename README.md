@@ -1,12 +1,29 @@
 # 🤖 Discord AI Chatbot
 
-Bot Discord multifungsi dengan **Groq AI** & **Gemini AI** untuk chat, translate, code explain, dan berbagai fitur menarik lainnya! Dilengkapi dengan **Interactive Menu** menggunakan Buttons dan Dropdown!
+Bot Discord multifungsi dengan **Groq AI** & **Gemini AI** untuk chat, translate, code explain, dan berbagai fitur menarik lainnya! Dilengkapi dengan **Interactive Menu** dan **AI Model Selector**!
 
 ---
 
 ## ✨ Fitur Utama
 
-### 🎮 Interactive Menus (NEW!)
+### 🤖 AI Model Selector (NEW!)
+Pilih model AI sesuai kebutuhan dengan dropdown interaktif:
+
+| Command | Deskripsi |
+|---------|-----------|
+| `/aimodel` | Buka menu pilih model AI |
+| `/models` | Lihat daftar model tersedia |
+| `/reset_ai` | Reset memory AI |
+
+**Available Gemini Models:**
+| Model | Nama | Deskripsi |
+|-------|------|-----------|
+| ⚡ Flash | `gemini-2.0-flash` | Fast & efficient |
+| 🪶 Flash-Lite | `gemini-2.0-flash-lite` | Lightweight & quick |
+| 💎 Pro | `gemini-1.5-pro` | Most capable |
+| 🚀 Flash-8B | `gemini-1.5-flash-8b` | Compact & fast |
+
+### 🎮 Interactive Menus
 Bot ini dilengkapi dengan menu interaktif menggunakan Discord UI Components:
 
 | Command | Deskripsi |
@@ -14,7 +31,6 @@ Bot ini dilengkapi dengan menu interaktif menggunakan Discord UI Components:
 | `/menu` | Menu utama dengan tombol interaktif |
 | `/helpmenu` | Menu bantuan dengan dropdown kategori |
 | `/roles` | Role selector dengan dropdown |
-| `/reset_ai` | Reset AI memory dengan konfirmasi |
 
 **Fitur Menu:**
 - 🔘 **Buttons** - Klik untuk aksi cepat
@@ -25,8 +41,8 @@ Bot ini dilengkapi dengan menu interaktif menggunakan Discord UI Components:
 ### 💬 AI Chat
 - Chat langsung dengan AI tanpa command
 - Conversation memory per user
-- Multiple AI models & personas
-- Adjustable creativity (temperature)
+- Multiple AI models (switchable!)
+- Support Gemini & Groq AI
 
 ### 🛠️ Tools Commands
 | Command | Deskripsi |
@@ -56,10 +72,22 @@ Bot ini dilengkapi dengan menu interaktif menggunakan Discord UI Components:
 | `!status` | Status bot dan info |
 
 ### 🤖 Available Models
-- `llama` - LLaMA 3.3 70B Versatile
-- `mixtral` - Mixtral 8x7B 32K
-- `gemma` - Gemma 2 9B IT
-- `llama-small` - LLaMA 3.1 8B Instant
+
+**Gemini AI (bot.py):**
+| Model | Deskripsi |
+|-------|-----------|
+| ⚡ `flash` | Gemini 2.0 Flash - Fast & efficient |
+| 🪶 `flash-lite` | Gemini 2.0 Flash Lite - Lightweight |
+| 💎 `pro` | Gemini 1.5 Pro - Most capable |
+| 🚀 `flash-8b` | Gemini 1.5 Flash 8B - Compact |
+
+**Groq AI (groq_chatbot.py):**
+| Model | Deskripsi |
+|-------|-----------|
+| `llama` | LLaMA 3.3 70B Versatile |
+| `mixtral` | Mixtral 8x7B 32K |
+| `gemma` | Gemma 2 9B IT |
+| `llama-small` | LLaMA 3.1 8B Instant |
 
 ### 🎭 Available Personas
 - `default` - Asisten umum
@@ -74,9 +102,10 @@ Bot ini dilengkapi dengan menu interaktif menggunakan Discord UI Components:
 
 ## 🛠️ Tech Stack
 - **Python 3.12**
-- **discord.py**
+- **discord.py** (with UI Components)
 - **python-dotenv**
-- **groq**
+- **google-generativeai** (Gemini)
+- **groq** (LLaMA, Mixtral)
 
 ---
 
@@ -159,6 +188,24 @@ python bot.py
 
 ## 📸 Screenshots
 
+### AI Model Selector
+```
+/aimodel
+┌─────────────────────────────────┐
+│     🤖 AI Model Selector        │
+├─────────────────────────────────┤
+│ Current: ⚡ gemini-2.0-flash    │
+│                                 │
+│ [🤖 Pilih model AI...        ▼] │
+│  ├ ⚡ FLASH - Fast & efficient  │
+│  ├ 🪶 FLASH-LITE - Lightweight  │
+│  ├ 💎 PRO - Most capable        │
+│  └ 🚀 FLASH-8B - Compact        │
+├─────────────────────────────────┤
+│ [📊 Model Info] [🗑️ Reset All]  │
+└─────────────────────────────────┘
+```
+
 ### Interactive Menu
 ```
 /menu
@@ -188,8 +235,9 @@ python bot.py
 
 ### Chat dengan AI
 ```
-User: Jelaskan tentang Python
+User: /ai Jelaskan tentang Python
 Bot: [Embed response dengan penjelasan lengkap]
+     Model: gemini-2.0-flash
 ```
 
 ---

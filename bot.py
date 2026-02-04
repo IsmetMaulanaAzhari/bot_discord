@@ -16,17 +16,48 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # ================= GEMINI CONFIG =================
 genai.configure(api_key=GEMINI_API_KEY)
 
-model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash", 
-    system_instruction=""" 
-    Kamu adalah chatbot Discord berbahasa Indonesia.
-    Peran kamu:
-    - Menjawab pertanyaan seputar IT, pemrograman, dan teknologi
-    - Jawaban singkat, padat, dan mudah dipahami
-    - Gunakan bahasa sopan dan ramah
-    - Jika tidak tahu, katakan tidak tahu
-    """
-)
+# Available Gemini Models
+GEMINI_MODELS = {
+    "flash": {
+        "name": "gemini-2.0-flash",
+        "description": "Fast & efficient",
+        "emoji": "⚡"
+    },
+    "flash-lite": {
+        "name": "gemini-2.0-flash-lite",
+        "description": "Lightweight & quick",
+        "emoji": "🪶"
+    },
+    "pro": {
+        "name": "gemini-1.5-pro",
+        "description": "Most capable",
+        "emoji": "💎"
+    },
+    "flash-8b": {
+        "name": "gemini-1.5-flash-8b",
+        "description": "Compact & fast",
+        "emoji": "🚀"
+    }
+}
+
+# Current settings
+current_gemini_model = "flash"
+
+def create_model(model_key: str):
+    """Create a Gemini model with system instruction."""
+    return genai.GenerativeModel(
+        model_name=GEMINI_MODELS[model_key]["name"],
+        system_instruction="""
+        Kamu adalah chatbot Discord berbahasa Indonesia.
+        Peran kamu:
+        - Menjawab pertanyaan seputar IT, pemrograman, dan teknologi
+        - Jawaban singkat, padat, dan mudah dipahami
+        - Gunakan bahasa sopan dan ramah
+        - Jika tidak tahu, katakan tidak tahu
+        """
+    )
+
+model = create_model(current_gemini_model)
 # ================= AI MEMORY (PER USER) =================
 user_chats = {}
 
@@ -80,6 +111,8 @@ class HelpSelect(ui.Select):
                 title="🤖 AI Commands",
                 description=(
                     "`/ai <prompt>` - Chat dengan Gemini AI\n"
+                    "`/aimodel` - Pilih model AI\n"
+                    "`/models` - Lihat daftar model\n"
                     "`/reset_ai` - Reset memory AI\n\n"
                     "💡 **Tips:** AI mengingat percakapan sebelumnya!"
                 ),
@@ -257,6 +290,62 @@ class RoleView(ui.View):
     def __init__(self, roles: list):
         super().__init__(timeout=60)
         self.add_item(RoleSelect(roles))
+
+# AI Model Select Menu
+class AIModelSelect(ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(
+                label=f"{info['emoji']} {key.upper()}",
+                value=key,
+                description=f"{info['name']} - {info['description']}",
+                default=(key == current_gemini_model)
+            )
+            for key, info in GEMINI_MODELS.items()
+        ]
+        super().__init__(placeholder="🤖 Pilih model AI...", options=options)
+    
+    async def callback(self, interaction: discord.Interaction):
+        global current_gemini_model, model, user_chats
+        
+        selected = self.values[0]
+        current_gemini_model = selected
+        model = create_model(selected)
+        
+        # Clear all user chats when model changes
+        user_chats.clear()
+        
+        info = GEMINI_MODELS[selected]
+        embed = discord.Embed(
+            title=f"{info['emoji']} Model Changed!",
+            description=f"Model AI berhasil diganti ke **{info['name']}**",
+            color=discord.Color.green()
+        )
+        embed.add_field(name="Description", value=info['description'], inline=False)
+        embed.add_field(name="Note", value="⚠️ Memory AI telah direset untuk semua user.", inline=False)
+        await interaction.response.edit_message(embed=embed, view=AIModelView())
+
+class AIModelView(ui.View):
+    def __init__(self):
+        super().__init__(timeout=120)
+        self.add_item(AIModelSelect())
+    
+    @ui.button(label="📊 Model Info", style=discord.ButtonStyle.secondary, row=1)
+    async def info_btn(self, interaction: discord.Interaction, button: ui.Button):
+        info = GEMINI_MODELS[current_gemini_model]
+        embed = discord.Embed(
+            title="📊 Current AI Model",
+            color=discord.Color.blue()
+        )
+        embed.add_field(name="Model", value=info['name'], inline=True)
+        embed.add_field(name="Type", value=info['description'], inline=True)
+        embed.add_field(name="Active Users", value=len(user_chats), inline=True)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+    
+    @ui.button(label="🗑️ Reset All Memory", style=discord.ButtonStyle.danger, row=1)
+    async def reset_btn(self, interaction: discord.Interaction, button: ui.Button):
+        user_chats.clear()
+        await interaction.response.send_message("✅ Memory AI untuk semua user telah direset!", ephemeral=True)
 
 # ================= EVENTS =================
 @bot.event
@@ -466,6 +555,52 @@ async def reset_ai(ctx):
         await msg.edit(content="❌ Dibatalkan.", view=None)
     else:
         await msg.edit(content="⏰ Timeout.", view=None)
+
+@bot.command()
+async def aimodel(ctx):
+    """Pilih model AI yang digunakan."""
+    info = GEMINI_MODELS[current_gemini_model]
+    embed = discord.Embed(
+        title="🤖 AI Model Selector",
+        description="Pilih model AI dari dropdown di bawah:",
+        color=discord.Color.purple()
+    )
+    embed.add_field(name="Current Model", value=f"{info['emoji']} {info['name']}", inline=True)
+    embed.add_field(name="Active Users", value=len(user_chats), inline=True)
+    embed.set_footer(text="Mengganti model akan reset memory AI")
+    await ctx.send(embed=embed, view=AIModelView())
+
+@bot.command()
+async def models(ctx):
+    """Lihat daftar model AI yang tersedia."""
+    embed = discord.Embed(
+        title="🤖 Available AI Models",
+        description="Model AI yang tersedia untuk digunakan:",
+        color=discord.Color.blue()
+    )
+    for key, info in GEMINI_MODELS.items():
+        status = "✅ Active" if key == current_gemini_model else ""
+        embed.add_field(
+            name=f"{info['emoji']} {key.upper()} {status}",
+            value=f"`{info['name']}`\n{info['description']}",
+            inline=True
+        )
+    embed.set_footer(text="Gunakan /aimodel untuk mengganti model")
+    await ctx.send(embed=embed)
+
+# Slash commands for AI model
+@bot.tree.command(name="aimodel", description="Pilih model AI")
+async def aimodel_slash(interaction: discord.Interaction):
+    info = GEMINI_MODELS[current_gemini_model]
+    embed = discord.Embed(
+        title="🤖 AI Model Selector",
+        description="Pilih model AI dari dropdown di bawah:",
+        color=discord.Color.purple()
+    )
+    embed.add_field(name="Current Model", value=f"{info['emoji']} {info['name']}", inline=True)
+    embed.add_field(name="Active Users", value=len(user_chats), inline=True)
+    embed.set_footer(text="Mengganti model akan reset memory AI")
+    await interaction.response.send_message(embed=embed, view=AIModelView())
 
 # Slash command for menu
 @bot.tree.command(name="menu", description="Buka menu utama interaktif")
