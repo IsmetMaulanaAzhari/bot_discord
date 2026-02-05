@@ -7,6 +7,8 @@ import os
 import socket
 import datetime
 import asyncio
+import random
+import re
 
 # ================= LOAD ENV =================
 load_dotenv()
@@ -79,6 +81,9 @@ bot = commands.AutoShardedBot(
 # Track bot start time for uptime
 start_time = datetime.datetime.now()
 
+# AFK users storage
+afk_users = {}
+
 # ================= INTERACTIVE MENUS =================
 
 # Help Menu Dropdown
@@ -87,10 +92,13 @@ class HelpSelect(ui.Select):
         options = [
             discord.SelectOption(label="🔧 Basic", value="basic", description="Ping, Info, Uptime", emoji="🔧"),
             discord.SelectOption(label="🤖 AI", value="ai", description="Chat dengan Gemini AI", emoji="🤖"),
-            discord.SelectOption(label="👤 User", value="user", description="Avatar, User Info", emoji="👤"),
-            discord.SelectOption(label="🏠 Server", value="server", description="Server Info", emoji="🏠"),
+            discord.SelectOption(label="👤 User", value="user", description="Avatar, User Info, Whois", emoji="👤"),
+            discord.SelectOption(label="🏠 Server", value="server", description="Server Info, Icon", emoji="🏠"),
             discord.SelectOption(label="🛡️ Moderation", value="mod", description="Kick, Warn, Clear", emoji="🛡️"),
-            discord.SelectOption(label="📊 Utility", value="utility", description="Poll dan lainnya", emoji="📊"),
+            discord.SelectOption(label="📊 Utility", value="utility", description="Poll, Timer, Remind", emoji="📊"),
+            discord.SelectOption(label="🎮 Fun", value="fun", description="8ball, Coinflip, RPS", emoji="🎮"),
+            discord.SelectOption(label="🎲 Games", value="games", description="Trivia, Scramble, Count", emoji="🎲"),
+            discord.SelectOption(label="⭐ Leveling", value="leveling", description="Rank, Leaderboard, XP", emoji="⭐"),
         ]
         super().__init__(placeholder="📚 Pilih kategori command...", options=options)
     
@@ -122,8 +130,10 @@ class HelpSelect(ui.Select):
                 title="👤 User Commands",
                 description=(
                     "`/avatar [@user]` - Lihat avatar user\n"
-                    "`/userinfo [@user]` - Info lengkap user\n"
-                    "`/banner [@user]` - Lihat banner user"
+                    "`/banner [@user]` - Lihat banner user\n"
+                    "`/userinfo [@user]` - Info user\n"
+                    "`/whois [@user]` - Info lengkap user\n"
+                    "`/afk [alasan]` - Set status AFK"
                 ),
                 color=discord.Color.purple()
             ),
@@ -150,10 +160,49 @@ class HelpSelect(ui.Select):
                 title="📊 Utility Commands",
                 description=(
                     "`/poll \"pertanyaan\" \"opsi1\" \"opsi2\"` - Buat poll\n"
+                    "`/timer <waktu>` - Set timer (5s, 10m, 1h)\n"
                     "`/remind <waktu> <pesan>` - Set reminder\n"
-                    "`/calculate <expr>` - Kalkulator"
+                    "`/giveaway <waktu> <hadiah>` - Buat giveaway\n"
+                    "`/math <expr>` - Kalkulator\n"
+                    "`/say <pesan>` - Bot kirim pesan\n"
+                    "`/embed \"judul\" deskripsi` - Buat embed"
                 ),
                 color=discord.Color.teal()
+            ),
+            "fun": discord.Embed(
+                title="🎮 Fun Commands",
+                description=(
+                    "`/8ball <pertanyaan>` - Tanya magic 8ball\n"
+                    "`/coinflip` - Lempar koin\n"
+                    "`/roll [sisi]` - Lempar dadu\n"
+                    "`/choose <opsi1> <opsi2>...` - Pilih random\n"
+                    "`/rps <batu/gunting/kertas>` - Main suit"
+                ),
+                color=discord.Color.magenta()
+            ),
+            "games": discord.Embed(
+                title="🎲 Games Commands",
+                description=(
+                    "`/trivia` - Main trivia quiz\n"
+                    "`/scramble` - Susun kata acak\n"
+                    "`/setcount` - Set counting channel\n"
+                    "`/count` - Lihat angka saat ini\n\n"
+                    "🎯 Menang game = bonus XP!"
+                ),
+                color=discord.Color.orange()
+            ),
+            "leveling": discord.Embed(
+                title="⭐ Leveling System",
+                description=(
+                    "`/rank [@user]` - Lihat level & XP\n"
+                    "`/leaderboard` - Top 10 XP\n\n"
+                    "📈 **Cara dapat XP:**\n"
+                    "• Kirim pesan (+1-5 XP)\n"
+                    "• Menang trivia (+25 XP)\n"
+                    "• Menang scramble (+20 XP)\n"
+                    "• Counting benar (+2 XP)"
+                ),
+                color=discord.Color.gold()
             )
         }
         embed = embeds.get(self.values[0])
@@ -172,7 +221,7 @@ class HelpView(ui.View):
             color=discord.Color.blurple()
         )
         embed.add_field(name="Prefix", value="`/`", inline=True)
-        embed.add_field(name="Categories", value="6", inline=True)
+        embed.add_field(name="Categories", value="9", inline=True)
         embed.set_footer(text="Gunakan dropdown untuk navigasi")
         await interaction.response.edit_message(embed=embed)
     
@@ -738,6 +787,632 @@ async def poll(ctx, question: str, *options):
     poll_msg = await ctx.send(embed=embed)
     for i in range(len(options)):
         await poll_msg.add_reaction(reactions[i])
+
+# ================= FUN COMMANDS =================
+@bot.command(name="8ball")
+async def eightball(ctx, *, question: str):
+    """Tanya magic 8ball."""
+    responses = [
+        # Positif
+        "🟢 Ya, pasti!", "🟢 Tentu saja!", "🟢 Tanpa ragu!",
+        "🟢 Sepertinya iya", "🟢 Kemungkinan besar iya",
+        # Netral
+        "🟡 Mungkin...", "🟡 Tanya lagi nanti", "🟡 Tidak bisa dipastikan",
+        "🟡 Konsentrasi dan tanya lagi", "🟡 Belum jelas",
+        # Negatif
+        "🔴 Jangan berharap", "🔴 Tidak", "🔴 Kemungkinan kecil",
+        "🔴 Sangat diragukan", "🔴 Jawabannya tidak"
+    ]
+    embed = discord.Embed(
+        title="🎱 Magic 8-Ball",
+        color=discord.Color.purple()
+    )
+    embed.add_field(name="❓ Pertanyaan", value=question, inline=False)
+    embed.add_field(name="🔮 Jawaban", value=random.choice(responses), inline=False)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def coinflip(ctx):
+    """Lempar koin."""
+    result = random.choice(["🪙 **Heads!**", "🪙 **Tails!**"])
+    embed = discord.Embed(
+        title="🪙 Coin Flip",
+        description=f"Hasil: {result}",
+        color=discord.Color.gold()
+    )
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def roll(ctx, sides: int = 6):
+    """Lempar dadu. Default 6 sisi."""
+    if sides < 2 or sides > 100:
+        await ctx.send("❌ Sisi dadu harus antara 2-100.")
+        return
+    result = random.randint(1, sides)
+    embed = discord.Embed(
+        title="🎲 Dice Roll",
+        description=f"Melempar d{sides}...\n\n🎯 Hasil: **{result}**",
+        color=discord.Color.red()
+    )
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def choose(ctx, *choices):
+    """Pilih secara random dari opsi yang diberikan."""
+    if len(choices) < 2:
+        await ctx.send("❌ Berikan minimal 2 pilihan.")
+        return
+    result = random.choice(choices)
+    embed = discord.Embed(
+        title="🤔 Random Choice",
+        color=discord.Color.blue()
+    )
+    embed.add_field(name="📋 Pilihan", value="\n".join([f"• {c}" for c in choices]), inline=False)
+    embed.add_field(name="✅ Dipilih", value=f"**{result}**", inline=False)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def rps(ctx, choice: str):
+    """Main batu gunting kertas. Pilih: batu/gunting/kertas"""
+    choices = {"batu": "🪨", "gunting": "✂️", "kertas": "📄"}
+    choice = choice.lower()
+    
+    if choice not in choices:
+        await ctx.send("❌ Pilih: `batu`, `gunting`, atau `kertas`")
+        return
+    
+    bot_choice = random.choice(list(choices.keys()))
+    
+    # Determine winner
+    if choice == bot_choice:
+        result = "🤝 **Seri!**"
+        color = discord.Color.yellow()
+    elif (choice == "batu" and bot_choice == "gunting") or \
+         (choice == "gunting" and bot_choice == "kertas") or \
+         (choice == "kertas" and bot_choice == "batu"):
+        result = "🎉 **Kamu Menang!**"
+        color = discord.Color.green()
+    else:
+        result = "😢 **Kamu Kalah!**"
+        color = discord.Color.red()
+    
+    embed = discord.Embed(title="✊✌️✋ Batu Gunting Kertas", color=color)
+    embed.add_field(name="Kamu", value=f"{choices[choice]} {choice.title()}", inline=True)
+    embed.add_field(name="Bot", value=f"{choices[bot_choice]} {bot_choice.title()}", inline=True)
+    embed.add_field(name="Hasil", value=result, inline=False)
+    await ctx.send(embed=embed)
+
+# ================= UTILITY COMMANDS =================
+@bot.command()
+async def timer(ctx, duration: str):
+    """Set timer. Contoh: /timer 5m, /timer 30s, /timer 1h"""
+    # Parse duration
+    match = re.match(r"(\d+)([smh])", duration.lower())
+    if not match:
+        await ctx.send("❌ Format: `<angka><s/m/h>` (contoh: 5m, 30s, 1h)")
+        return
+    
+    amount = int(match.group(1))
+    unit = match.group(2)
+    
+    units = {"s": ("detik", 1), "m": ("menit", 60), "h": ("jam", 3600)}
+    unit_name, multiplier = units[unit]
+    seconds = amount * multiplier
+    
+    if seconds > 86400:  # Max 24 hours
+        await ctx.send("❌ Maksimal 24 jam.")
+        return
+    
+    await ctx.send(f"⏰ Timer set untuk **{amount} {unit_name}**!")
+    await asyncio.sleep(seconds)
+    await ctx.send(f"🔔 {ctx.author.mention} Timer **{amount} {unit_name}** sudah selesai!")
+
+@bot.command()
+async def math(ctx, *, expression: str):
+    """Kalkulator sederhana."""
+    # Sanitize input - only allow safe characters
+    allowed = set("0123456789+-*/.() ")
+    if not all(c in allowed for c in expression):
+        await ctx.send("❌ Ekspresi tidak valid.")
+        return
+    
+    try:
+        result = eval(expression)
+        embed = discord.Embed(
+            title="🔢 Kalkulator",
+            color=discord.Color.blue()
+        )
+        embed.add_field(name="📝 Ekspresi", value=f"`{expression}`", inline=False)
+        embed.add_field(name="✅ Hasil", value=f"**{result}**", inline=False)
+        await ctx.send(embed=embed)
+    except:
+        await ctx.send("❌ Tidak dapat menghitung ekspresi.")
+
+@bot.command()
+async def say(ctx, *, message: str):
+    """Bot mengirim pesan."""
+    await ctx.message.delete()
+    await ctx.send(message)
+
+@bot.command()
+async def embed(ctx, title: str, *, description: str):
+    """Buat embed custom. Contoh: /embed "Judul" Deskripsi disini"""
+    embed = discord.Embed(
+        title=title,
+        description=description,
+        color=discord.Color.random(),
+        timestamp=datetime.datetime.now()
+    )
+    embed.set_footer(text=f"Dibuat oleh {ctx.author.display_name}", icon_url=ctx.author.display_avatar.url)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def afk(ctx, *, reason: str = "AFK"):
+    """Set status AFK."""
+    afk_users[ctx.author.id] = {
+        "reason": reason,
+        "time": datetime.datetime.now()
+    }
+    await ctx.send(f"💤 {ctx.author.mention} sekarang AFK: **{reason}**")
+
+@bot.command()
+async def whois(ctx, member: discord.Member = None):
+    """Info lengkap tentang user."""
+    member = member or ctx.author
+    
+    # Calculate account age
+    account_age = (datetime.datetime.now(datetime.timezone.utc) - member.created_at).days
+    server_age = (datetime.datetime.now(datetime.timezone.utc) - member.joined_at).days
+    
+    # Get permissions
+    key_perms = []
+    if member.guild_permissions.administrator:
+        key_perms.append("Administrator")
+    if member.guild_permissions.manage_guild:
+        key_perms.append("Manage Server")
+    if member.guild_permissions.manage_messages:
+        key_perms.append("Manage Messages")
+    if member.guild_permissions.kick_members:
+        key_perms.append("Kick Members")
+    if member.guild_permissions.ban_members:
+        key_perms.append("Ban Members")
+    
+    roles = [role.mention for role in member.roles[1:][:10]]  # Max 10 roles
+    
+    embed = discord.Embed(
+        title=f"👤 {member.display_name}",
+        description=f"{member.mention}",
+        color=member.color,
+        timestamp=datetime.datetime.now()
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.add_field(name="🏷️ Username", value=str(member), inline=True)
+    embed.add_field(name="🆔 ID", value=member.id, inline=True)
+    embed.add_field(name="🤖 Bot?", value="Ya" if member.bot else "Tidak", inline=True)
+    embed.add_field(name="📅 Akun Dibuat", value=f"{member.created_at.strftime('%d/%m/%Y')}\n({account_age} hari)", inline=True)
+    embed.add_field(name="📥 Bergabung", value=f"{member.joined_at.strftime('%d/%m/%Y')}\n({server_age} hari)", inline=True)
+    embed.add_field(name="🎨 Status", value=str(member.status).title(), inline=True)
+    embed.add_field(name=f"🎭 Roles [{len(member.roles)-1}]", value=" ".join(roles) if roles else "Tidak ada", inline=False)
+    if key_perms:
+        embed.add_field(name="🔑 Key Permissions", value=", ".join(key_perms), inline=False)
+    
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def membercount(ctx):
+    """Tampilkan jumlah member server."""
+    guild = ctx.guild
+    total = guild.member_count
+    bots = len([m for m in guild.members if m.bot])
+    humans = total - bots
+    
+    embed = discord.Embed(
+        title=f"👥 Member Count - {guild.name}",
+        color=discord.Color.blue()
+    )
+    embed.add_field(name="👤 Manusia", value=humans, inline=True)
+    embed.add_field(name="🤖 Bot", value=bots, inline=True)
+    embed.add_field(name="📊 Total", value=total, inline=True)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def servericon(ctx):
+    """Tampilkan icon server."""
+    guild = ctx.guild
+    if not guild.icon:
+        await ctx.send("❌ Server tidak memiliki icon.")
+        return
+    
+    embed = discord.Embed(
+        title=f"🖼️ Icon {guild.name}",
+        color=discord.Color.blue()
+    )
+    embed.set_image(url=guild.icon.url)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def banner(ctx, member: discord.Member = None):
+    """Tampilkan banner user."""
+    member = member or ctx.author
+    user = await bot.fetch_user(member.id)  # Fetch full user to get banner
+    
+    if not user.banner:
+        await ctx.send(f"❌ {member.display_name} tidak memiliki banner.")
+        return
+    
+    embed = discord.Embed(
+        title=f"🖼️ Banner {member.display_name}",
+        color=member.color
+    )
+    embed.set_image(url=user.banner.url)
+    await ctx.send(embed=embed)
+
+# ================= LEVELING SYSTEM =================
+user_xp = {}
+
+def get_level(xp: int) -> int:
+    """Calculate level from XP."""
+    return int((xp / 100) ** 0.5)
+
+def xp_for_level(level: int) -> int:
+    """Calculate XP needed for a level."""
+    return (level ** 2) * 100
+
+@bot.command()
+async def rank(ctx, member: discord.Member = None):
+    """Lihat level dan XP user."""
+    member = member or ctx.author
+    xp = user_xp.get(member.id, 0)
+    level = get_level(xp)
+    next_level_xp = xp_for_level(level + 1)
+    progress = (xp - xp_for_level(level)) / (next_level_xp - xp_for_level(level)) * 100
+    
+    # Create progress bar
+    bar_length = 10
+    filled = int(progress / 100 * bar_length)
+    bar = "█" * filled + "░" * (bar_length - filled)
+    
+    embed = discord.Embed(
+        title=f"📊 Rank - {member.display_name}",
+        color=member.color
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.add_field(name="⭐ Level", value=level, inline=True)
+    embed.add_field(name="✨ XP", value=f"{xp}/{next_level_xp}", inline=True)
+    embed.add_field(name="📈 Progress", value=f"{bar} {progress:.1f}%", inline=False)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def leaderboard(ctx):
+    """Tampilkan leaderboard XP."""
+    if not user_xp:
+        await ctx.send("❌ Belum ada data XP.")
+        return
+    
+    sorted_users = sorted(user_xp.items(), key=lambda x: x[1], reverse=True)[:10]
+    
+    embed = discord.Embed(
+        title="🏆 XP Leaderboard",
+        color=discord.Color.gold()
+    )
+    
+    medals = ["🥇", "🥈", "🥉"]
+    description = ""
+    for i, (user_id, xp) in enumerate(sorted_users):
+        member = ctx.guild.get_member(user_id)
+        if member:
+            medal = medals[i] if i < 3 else f"**{i+1}.**"
+            level = get_level(xp)
+            description += f"{medal} {member.display_name} - Level {level} ({xp} XP)\n"
+    
+    embed.description = description or "Tidak ada data"
+    await ctx.send(embed=embed)
+
+# ================= GIVEAWAY SYSTEM =================
+active_giveaways = {}
+
+class GiveawayView(ui.View):
+    def __init__(self, prize: str, host_id: int, ends_at: datetime.datetime):
+        super().__init__(timeout=None)
+        self.prize = prize
+        self.host_id = host_id
+        self.ends_at = ends_at
+        self.participants = set()
+    
+    @ui.button(label="🎉 Join Giveaway", style=discord.ButtonStyle.green)
+    async def join(self, interaction: discord.Interaction, button: ui.Button):
+        if interaction.user.id in self.participants:
+            await interaction.response.send_message("❌ Kamu sudah bergabung!", ephemeral=True)
+            return
+        
+        self.participants.add(interaction.user.id)
+        button.label = f"🎉 Join ({len(self.participants)})"
+        await interaction.response.edit_message(view=self)
+        await interaction.followup.send("✅ Berhasil bergabung giveaway!", ephemeral=True)
+
+@bot.command()
+@commands.has_permissions(manage_guild=True)
+async def giveaway(ctx, duration: str, *, prize: str):
+    """Buat giveaway. Contoh: /giveaway 1h Nitro Classic"""
+    match = re.match(r"(\d+)([smh])", duration.lower())
+    if not match:
+        await ctx.send("❌ Format durasi: `<angka><s/m/h>`")
+        return
+    
+    amount = int(match.group(1))
+    unit = match.group(2)
+    units = {"s": 1, "m": 60, "h": 3600}
+    seconds = amount * units[unit]
+    
+    if seconds > 604800:  # Max 7 days
+        await ctx.send("❌ Maksimal 7 hari.")
+        return
+    
+    ends_at = datetime.datetime.now() + datetime.timedelta(seconds=seconds)
+    view = GiveawayView(prize, ctx.author.id, ends_at)
+    
+    embed = discord.Embed(
+        title="🎉 GIVEAWAY 🎉",
+        description=f"**Hadiah:** {prize}\n\n"
+                    f"**Host:** {ctx.author.mention}\n"
+                    f"**Berakhir:** <t:{int(ends_at.timestamp())}:R>\n\n"
+                    f"Klik tombol di bawah untuk ikut!",
+        color=discord.Color.gold()
+    )
+    embed.set_footer(text=f"Giveaway ID: {ctx.message.id}")
+    
+    msg = await ctx.send(embed=embed, view=view)
+    active_giveaways[msg.id] = view
+    
+    # Wait and end giveaway
+    await asyncio.sleep(seconds)
+    
+    if msg.id in active_giveaways:
+        view = active_giveaways.pop(msg.id)
+        if not view.participants:
+            await ctx.send("😢 Tidak ada peserta giveaway.")
+        else:
+            winner_id = random.choice(list(view.participants))
+            winner = ctx.guild.get_member(winner_id)
+            
+            embed = discord.Embed(
+                title="🎊 GIVEAWAY ENDED 🎊",
+                description=f"**Hadiah:** {prize}\n\n"
+                            f"🏆 **Pemenang:** {winner.mention}\n"
+                            f"Selamat! 🎉",
+                color=discord.Color.green()
+            )
+            await ctx.send(embed=embed)
+
+# ================= REMINDER SYSTEM =================
+@bot.command()
+async def remind(ctx, time: str, *, message: str):
+    """Set reminder. Contoh: /remind 30m Makan siang"""
+    match = re.match(r"(\d+)([smhd])", time.lower())
+    if not match:
+        await ctx.send("❌ Format: `<angka><s/m/h/d>` (contoh: 30m, 1h, 2d)")
+        return
+    
+    amount = int(match.group(1))
+    unit = match.group(2)
+    units = {"s": ("detik", 1), "m": ("menit", 60), "h": ("jam", 3600), "d": ("hari", 86400)}
+    unit_name, multiplier = units[unit]
+    seconds = amount * multiplier
+    
+    if seconds > 604800:  # Max 7 days
+        await ctx.send("❌ Maksimal 7 hari.")
+        return
+    
+    remind_time = datetime.datetime.now() + datetime.timedelta(seconds=seconds)
+    
+    embed = discord.Embed(
+        title="⏰ Reminder Set",
+        description=f"Aku akan mengingatkanmu dalam **{amount} {unit_name}**",
+        color=discord.Color.blue()
+    )
+    embed.add_field(name="📝 Pesan", value=message, inline=False)
+    embed.add_field(name="🕐 Waktu", value=f"<t:{int(remind_time.timestamp())}:R>", inline=False)
+    await ctx.send(embed=embed)
+    
+    await asyncio.sleep(seconds)
+    
+    remind_embed = discord.Embed(
+        title="🔔 Reminder!",
+        description=message,
+        color=discord.Color.gold(),
+        timestamp=datetime.datetime.now()
+    )
+    remind_embed.set_footer(text="Reminder yang kamu set")
+    await ctx.send(f"{ctx.author.mention}", embed=remind_embed)
+
+# ================= TRIVIA GAME =================
+trivia_questions = [
+    {"q": "Bahasa pemrograman apa yang dibuat oleh Guido van Rossum?", "a": "python", "opts": ["Java", "Python", "C++", "Ruby"]},
+    {"q": "Apa kepanjangan dari HTML?", "a": "hypertext markup language", "opts": ["HyperText Markup Language", "High Tech Modern Language", "Home Tool Markup Language", "Hyper Transfer Markup Language"]},
+    {"q": "Siapa pendiri Microsoft?", "a": "bill gates", "opts": ["Steve Jobs", "Bill Gates", "Mark Zuckerberg", "Elon Musk"]},
+    {"q": "Tahun berapa Python pertama kali dirilis?", "a": "1991", "opts": ["1989", "1991", "1995", "2000"]},
+    {"q": "Apa nama maskot Linux?", "a": "tux", "opts": ["Penguin", "Tux", "Linux", "Linus"]},
+    {"q": "Framework web Python yang terkenal adalah?", "a": "django", "opts": ["Spring", "Django", "Laravel", "Express"]},
+    {"q": "Siapa pencipta Linux?", "a": "linus torvalds", "opts": ["Bill Gates", "Linus Torvalds", "Dennis Ritchie", "Ken Thompson"]},
+    {"q": "Apa kepanjangan dari CPU?", "a": "central processing unit", "opts": ["Central Processing Unit", "Computer Personal Unit", "Central Program Unit", "Control Processing Unit"]},
+]
+
+class TriviaView(ui.View):
+    def __init__(self, question: dict, user_id: int):
+        super().__init__(timeout=30)
+        self.question = question
+        self.user_id = user_id
+        self.answered = False
+        
+        # Add buttons for each option
+        for i, opt in enumerate(question["opts"]):
+            button = ui.Button(label=opt, style=discord.ButtonStyle.secondary, custom_id=f"trivia_{i}")
+            button.callback = self.create_callback(opt)
+            self.add_item(button)
+    
+    def create_callback(self, option: str):
+        async def callback(interaction: discord.Interaction):
+            if interaction.user.id != self.user_id:
+                await interaction.response.send_message("❌ Ini bukan trivia kamu!", ephemeral=True)
+                return
+            
+            if self.answered:
+                return
+            
+            self.answered = True
+            correct = option.lower() == self.question["a"].lower() or self.question["a"].lower() in option.lower()
+            
+            # Disable all buttons
+            for item in self.children:
+                item.disabled = True
+                if hasattr(item, 'label'):
+                    if item.label == option:
+                        item.style = discord.ButtonStyle.success if correct else discord.ButtonStyle.danger
+                    elif self.question["a"].lower() in item.label.lower():
+                        item.style = discord.ButtonStyle.success
+            
+            if correct:
+                # Give XP
+                user_xp[interaction.user.id] = user_xp.get(interaction.user.id, 0) + 25
+                result_text = "✅ **Benar!** +25 XP"
+                color = discord.Color.green()
+            else:
+                result_text = f"❌ **Salah!** Jawaban: {self.question['opts'][[o.lower() for o in self.question['opts']].index(self.question['a']) if self.question['a'] in [o.lower() for o in self.question['opts']] else 0]}"
+                color = discord.Color.red()
+            
+            embed = discord.Embed(
+                title="🧠 Trivia",
+                description=f"**{self.question['q']}**\n\n{result_text}",
+                color=color
+            )
+            await interaction.response.edit_message(embed=embed, view=self)
+            self.stop()
+        
+        return callback
+    
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+
+@bot.command()
+async def trivia(ctx):
+    """Main trivia quiz!"""
+    question = random.choice(trivia_questions)
+    random.shuffle(question["opts"])
+    
+    view = TriviaView(question, ctx.author.id)
+    
+    embed = discord.Embed(
+        title="🧠 Trivia",
+        description=f"**{question['q']}**\n\nPilih jawaban dalam 30 detik!",
+        color=discord.Color.blue()
+    )
+    embed.set_footer(text=f"Dimainkan oleh {ctx.author.display_name}")
+    
+    await ctx.send(embed=embed, view=view)
+
+# ================= WORD SCRAMBLE GAME =================
+scramble_words = ["python", "discord", "programming", "computer", "keyboard", "developer", "software", "internet", "database", "algorithm"]
+
+@bot.command()
+async def scramble(ctx):
+    """Main word scramble game!"""
+    word = random.choice(scramble_words)
+    scrambled = ''.join(random.sample(word, len(word)))
+    
+    # Make sure it's actually scrambled
+    while scrambled == word:
+        scrambled = ''.join(random.sample(word, len(word)))
+    
+    embed = discord.Embed(
+        title="🔤 Word Scramble",
+        description=f"Susun huruf berikut menjadi kata yang benar!\n\n**`{scrambled.upper()}`**\n\nKetik jawabanmu dalam 30 detik!",
+        color=discord.Color.purple()
+    )
+    await ctx.send(embed=embed)
+    
+    def check(m):
+        return m.author == ctx.author and m.channel == ctx.channel
+    
+    try:
+        msg = await bot.wait_for('message', check=check, timeout=30)
+        if msg.content.lower() == word:
+            user_xp[ctx.author.id] = user_xp.get(ctx.author.id, 0) + 20
+            await ctx.send(f"🎉 **Benar!** Jawabannya adalah `{word}`. +20 XP!")
+        else:
+            await ctx.send(f"❌ **Salah!** Jawabannya adalah `{word}`.")
+    except asyncio.TimeoutError:
+        await ctx.send(f"⏰ **Waktu habis!** Jawabannya adalah `{word}`.")
+
+# ================= COUNTING GAME =================
+counting_channels = {}
+
+@bot.command()
+@commands.has_permissions(manage_channels=True)
+async def setcount(ctx):
+    """Set channel ini sebagai counting channel."""
+    counting_channels[ctx.channel.id] = 0
+    await ctx.send("✅ Channel ini sekarang adalah counting channel! Mulai dari **1**!")
+
+@bot.command()
+async def count(ctx):
+    """Lihat angka saat ini di counting channel."""
+    if ctx.channel.id not in counting_channels:
+        await ctx.send("❌ Ini bukan counting channel.")
+        return
+    await ctx.send(f"📊 Angka saat ini: **{counting_channels[ctx.channel.id]}**")
+
+# ================= AFK CHECK IN ON_MESSAGE =================
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+    
+    # XP System - Give XP for messages
+    if not message.content.startswith("/"):
+        user_xp[message.author.id] = user_xp.get(message.author.id, 0) + random.randint(1, 5)
+        
+        # Check for level up
+        old_level = get_level(user_xp[message.author.id] - 5)
+        new_level = get_level(user_xp[message.author.id])
+        if new_level > old_level:
+            await message.channel.send(f"🎉 {message.author.mention} naik ke **Level {new_level}**!")
+    
+    # Counting game check
+    if message.channel.id in counting_channels:
+        try:
+            num = int(message.content)
+            expected = counting_channels[message.channel.id] + 1
+            if num == expected:
+                counting_channels[message.channel.id] = num
+                await message.add_reaction("✅")
+                # Bonus XP for counting
+                user_xp[message.author.id] = user_xp.get(message.author.id, 0) + 2
+            else:
+                await message.add_reaction("❌")
+                await message.channel.send(f"❌ {message.author.mention} salah! Angka seharusnya **{expected}**. Mulai ulang dari **1**!")
+                counting_channels[message.channel.id] = 0
+        except ValueError:
+            pass  # Not a number, ignore
+    
+    # Check if user is back from AFK
+    if message.author.id in afk_users:
+        afk_data = afk_users.pop(message.author.id)
+        afk_time = datetime.datetime.now() - afk_data["time"]
+        minutes = int(afk_time.total_seconds() // 60)
+        await message.channel.send(f"👋 Welcome back {message.author.mention}! Kamu AFK selama **{minutes} menit**.")
+    
+    # Check if mentioned user is AFK
+    for mentioned in message.mentions:
+        if mentioned.id in afk_users:
+            afk_data = afk_users[mentioned.id]
+            await message.channel.send(f"💤 {mentioned.display_name} sedang AFK: **{afk_data['reason']}**")
+    
+    # Auto reply halo bot
+    if "halo bot" in message.content.lower():
+        await message.channel.send("Halo juga 👋")
+    
+    await bot.process_commands(message)
 
 # ================= ERROR HANDLER =================
 @kick.error

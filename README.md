@@ -1,12 +1,80 @@
 # 🤖 Discord AI Chatbot
 
-Bot Discord multifungsi dengan **Groq AI** & **Gemini AI** untuk chat, translate, code explain, dan berbagai fitur menarik lainnya! Dilengkapi dengan **Interactive Menu** dan **AI Model Selector**!
+Bot Discord multifungsi dengan **Groq AI** & **Gemini AI** untuk chat, games, utilities, dan berbagai fitur menarik lainnya! Dilengkapi dengan **Interactive Menu**, **AI Model Selector**, **Leveling System**, dan **Mini Games**!
 
 ---
 
 ## ✨ Fitur Utama
 
-### 🤖 AI Model Selector (NEW!)
+### ⭐ Leveling System (NEW!)
+Sistem XP dan level otomatis!
+
+| Command | Deskripsi |
+|---------|-----------|
+| `/rank [@user]` | Lihat level & XP dengan progress bar |
+| `/leaderboard` | Top 10 user dengan XP tertinggi |
+
+**Cara Dapat XP:**
+- 📝 Kirim pesan: +1-5 XP
+- 🧠 Menang trivia: +25 XP
+- 🔤 Menang scramble: +20 XP
+- 🔢 Counting benar: +2 XP
+
+### 🎲 Mini Games (NEW!)
+Game interaktif dengan tombol dan XP rewards!
+
+| Command | Deskripsi |
+|---------|-----------|
+| `/trivia` | Quiz dengan tombol pilihan jawaban |
+| `/scramble` | Susun kata yang diacak |
+| `/setcount` | Set counting channel |
+| `/count` | Lihat angka saat ini |
+
+### 🎁 Giveaway System (NEW!)
+| Command | Deskripsi |
+|---------|-----------|
+| `/giveaway <waktu> <hadiah>` | Buat giveaway dengan tombol join |
+| `/remind <waktu> <pesan>` | Set reminder |
+
+### 🎮 Fun & Games
+Mainkan berbagai game seru langsung di Discord:
+
+| Command | Deskripsi |
+|---------|-----------|
+| `/8ball <pertanyaan>` | Tanya magic 8ball |
+| `/coinflip` | Lempar koin |
+| `/roll [sisi]` | Lempar dadu (default 6 sisi) |
+| `/choose <opsi1> <opsi2>...` | Pilih random dari opsi |
+| `/rps <batu/gunting/kertas>` | Main suit dengan bot |
+
+### 📊 Utility Commands
+Tools berguna untuk sehari-hari:
+
+| Command | Deskripsi |
+|---------|-----------|
+| `/timer <waktu>` | Set timer (5s, 10m, 1h) |
+| `/remind <waktu> <pesan>` | Set reminder (maks 7 hari) |
+| `/math <expr>` | Kalkulator (2+2, 10*5) |
+| `/say <pesan>` | Bot kirim pesan |
+| `/embed "judul" deskripsi` | Buat embed custom |
+| `/afk [alasan]` | Set status AFK |
+
+### 👤 User Commands
+| Command | Deskripsi |
+|---------|-----------|
+| `/whois [@user]` | Info lengkap user + permissions |
+| `/banner [@user]` | Lihat banner user |
+| `/avatar [@user]` | Lihat avatar user |
+| `/userinfo [@user]` | Info user |
+
+### 🏠 Server Commands
+| Command | Deskripsi |
+|---------|-----------|
+| `/membercount` | Statistik member server |
+| `/servericon` | Lihat icon server |
+| `/serverinfo` | Info lengkap server |
+
+### 🤖 AI Model Selector
 Pilih model AI sesuai kebutuhan dengan dropdown interaktif:
 
 | Command | Deskripsi |
@@ -29,7 +97,7 @@ Bot ini dilengkapi dengan menu interaktif menggunakan Discord UI Components:
 | Command | Deskripsi |
 |---------|-----------|
 | `/menu` | Menu utama dengan tombol interaktif |
-| `/helpmenu` | Menu bantuan dengan dropdown kategori |
+| `/helpmenu` | Menu bantuan dengan dropdown (9 kategori!) |
 | `/roles` | Role selector dengan dropdown |
 
 **Fitur Menu:**
@@ -44,7 +112,7 @@ Bot ini dilengkapi dengan menu interaktif menggunakan Discord UI Components:
 - Multiple AI models (switchable!)
 - Support Gemini & Groq AI
 
-### 🛠️ Tools Commands
+### 🛠️ Tools Commands (Groq Bot)
 | Command | Deskripsi |
 |---------|-----------|
 | `!translate <lang> <teks>` | Terjemahkan ke bahasa lain |
@@ -52,7 +120,7 @@ Bot ini dilengkapi dengan menu interaktif menggunakan Discord UI Components:
 | `!explain <kode>` | Jelaskan kode programming |
 | `!imagine <deskripsi>` | Generate AI image prompt |
 
-### 🎮 Fun Commands
+### 🎲 Fun Commands (Groq Bot)
 | Command | Deskripsi |
 |---------|-----------|
 | `!quiz [topik]` | Quiz random dengan berbagai topik |
@@ -60,16 +128,13 @@ Bot ini dilengkapi dengan menu interaktif menggunakan Discord UI Components:
 | `!motivate` | Dapatkan motivasi harian |
 | `!joke` | Random jokes lucu |
 
-### ⚙️ Settings Commands
+### 🛡️ Moderation Commands
 | Command | Deskripsi |
 |---------|-----------|
-| `!help` | Tampilkan semua command |
-| `!model [nama]` | Lihat/ganti model AI |
-| `!persona [nama]` | Lihat/ganti persona AI |
-| `!temp [0.0-1.0]` | Atur kreativitas AI |
-| `!clear` | Hapus riwayat chat |
-| `!history` | Lihat jumlah riwayat |
-| `!status` | Status bot dan info |
+| `/kick @user [alasan]` | Kick member |
+| `/warn @user [alasan]` | Warn member |
+| `/clear <jumlah>` | Hapus pesan (1-100) |
+| `/poll "?" "A" "B"` | Buat polling |
 
 ### 🤖 Available Models
 
@@ -112,8 +177,10 @@ Bot ini dilengkapi dengan menu interaktif menggunakan Discord UI Components:
 ## 📂 Struktur Project
 ```
 bot-discord/
-├── groq_chatbot.py
-├── bot.py
+├── bot.py              # Gemini AI Bot (Main)
+├── groq_chatbot.py     # Groq AI Bot
+├── gemini_chatbot.py   # CLI Gemini Chat
+├── tes.py              # Test bot
 ├── requirements.txt
 ├── .env
 ├── .gitignore
@@ -187,6 +254,100 @@ python bot.py
 ---
 
 ## 📸 Screenshots
+
+### Leveling System
+```
+/rank
+┌─────────────────────────────────┐
+│     📊 Rank - Username          │
+├─────────────────────────────────┤
+│ ⭐ Level: 5     ✨ XP: 2500/3600│
+│                                 │
+│ 📈 Progress:                    │
+│ ████████░░ 69.4%                │
+└─────────────────────────────────┘
+
+/leaderboard
+┌─────────────────────────────────┐
+│     🏆 XP Leaderboard           │
+├─────────────────────────────────┤
+│ 🥇 User1 - Level 10 (10000 XP)  │
+│ 🥈 User2 - Level 8 (6400 XP)    │
+│ 🥉 User3 - Level 5 (2500 XP)    │
+│ 4. User4 - Level 3 (900 XP)     │
+│ 5. User5 - Level 2 (400 XP)     │
+└─────────────────────────────────┘
+```
+
+### Trivia Game
+```
+/trivia
+┌─────────────────────────────────┐
+│     🧠 Trivia                   │
+├─────────────────────────────────┤
+│ Bahasa pemrograman apa yang     │
+│ dibuat oleh Guido van Rossum?   │
+│                                 │
+│ [Java] [Python] [C++] [Ruby]    │
+└─────────────────────────────────┘
+
+[Setelah jawab benar]
+✅ **Benar!** +25 XP
+```
+
+### Giveaway System
+```
+/giveaway 1h Nitro Classic
+┌─────────────────────────────────┐
+│     🎉 GIVEAWAY 🎉              │
+├─────────────────────────────────┤
+│ Hadiah: Nitro Classic           │
+│ Host: @Admin                    │
+│ Berakhir: dalam 1 jam           │
+│                                 │
+│ [🎉 Join Giveaway (15)]         │
+└─────────────────────────────────┘
+
+[Setelah berakhir]
+🎊 GIVEAWAY ENDED 🎊
+🏆 Pemenang: @LuckyUser
+Selamat! 🎉
+```
+
+### Fun Games
+```
+/8ball Apakah hari ini hari keberuntungan?
+┌─────────────────────────────────┐
+│     🎱 Magic 8-Ball             │
+├─────────────────────────────────┤
+│ ❓ Pertanyaan:                  │
+│ Apakah hari ini keberuntungan?  │
+│                                 │
+│ 🔮 Jawaban:                     │
+│ 🟢 Ya, pasti!                   │
+└─────────────────────────────────┘
+
+/rps batu
+┌─────────────────────────────────┐
+│  ✊✌️✋ Batu Gunting Kertas     │
+├─────────────────────────────────┤
+│ Kamu: 🪨 Batu  │  Bot: ✂️ Gunting │
+│                                 │
+│ Hasil: 🎉 **Kamu Menang!**      │
+└─────────────────────────────────┘
+```
+
+### AFK System
+```
+/afk Makan siang dulu
+💤 @User sekarang AFK: **Makan siang dulu**
+
+[Saat user di-mention]
+💤 User sedang AFK: **Makan siang dulu**
+
+[Saat user kembali chat]
+👋 Welcome back @User! Kamu AFK selama **15 menit**.
+```
 
 ### AI Model Selector
 ```
